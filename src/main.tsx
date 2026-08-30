@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { createRoot } from "react-dom/client";
 import { marked } from "marked";
 import hljs from "highlight.js/lib/core";
@@ -11,6 +11,8 @@ import python from "highlight.js/lib/languages/python";
 import "highlight.js/styles/github-dark.css";
 import "./styles.css";
 import { courseData } from "./course-data";
+import darkBackground from "./assets/backgrounds/dark-bg.webp";
+import lightBackground from "./assets/backgrounds/light-bg.webp";
 
 hljs.registerLanguage("javascript", javascript);
 hljs.registerLanguage("js", javascript);
@@ -122,7 +124,12 @@ function slideNumber(section: string, fallback: number) {
 }
 
 function slideTitle(section: string, fallback: number) {
-  return section.match(/^#\s+(.+)$/m)?.[1]?.trim() || `Slide ${String(fallback).padStart(3, "0")}`;
+  return (
+    section
+      .match(/^#\s+(.+)$/m)?.[1]
+      ?.replace(/^slide\s+\d+\s*[-–—:]\s*/i, "")
+      .trim() || `Slide ${String(fallback).padStart(3, "0")}`
+  );
 }
 
 function narrationForSlide(source: string, number: number) {
@@ -139,31 +146,53 @@ function App() {
   const [mode, setMode] = useState<Mode>("home");
   const [meeting, setMeeting] = useState<Meeting | null>(null);
   const [slideIndex, setSlideIndex] = useState(0);
+  const [slideMode, setSlideMode] = useState<"single" | "all">("single");
   const [slideTab, setSlideTab] = useState<SlideTab>("markdown");
+  const [sidebarOpen, setSidebarOpen] = useState(localStorage.getItem("learning-sidebar") !== "collapsed");
+  const [theme, setTheme] = useState<"dark" | "light">(
+    (localStorage.getItem("learning-theme") as "dark" | "light") || "dark"
+  );
+  const [backgroundEnabled, setBackgroundEnabled] = useState(localStorage.getItem("learning-background") !== "off");
   const [query, setQuery] = useState("");
   const filtered = courseData.meetings.filter((item) =>
     `${item.title} ${item.subtitle || ""}`.toLowerCase().includes(query.toLowerCase())
   );
 
+  useEffect(() => {
+    document.documentElement.dataset.theme = theme;
+    document.documentElement.style.setProperty("--learning-bg-image", `url(${theme === "dark" ? darkBackground : lightBackground})`);
+    localStorage.setItem("learning-theme", theme);
+  }, [theme]);
+
+  useEffect(() => {
+    localStorage.setItem("learning-sidebar", sidebarOpen ? "expanded" : "collapsed");
+  }, [sidebarOpen]);
+
+  useEffect(() => {
+    document.documentElement.dataset.background = backgroundEnabled ? "on" : "off";
+    localStorage.setItem("learning-background", backgroundEnabled ? "on" : "off");
+  }, [backgroundEnabled]);
+
   const openMeeting = (item: Meeting) => {
     setMeeting(item);
     setMode("meeting");
     setSlideIndex(0);
+    setSlideMode("single");
     setSlideTab("markdown");
   };
 
   return (
-    <div className="app-shell">
-      <aside className="sidebar">
+    <div className={`app-shell ${sidebarOpen ? "" : "sidebar-collapsed"} ${backgroundEnabled ? "background-enabled" : ""}`}>
+      <aside className={`sidebar ${sidebarOpen ? "" : "collapsed"}`}>
         <button className="brand" onClick={() => setMode("home")}>
-          <span>{courseData.code || "MK"}</span>
-          <strong>{courseData.name}</strong>
+          <span className="brand-icon">{icon("school")}</span>
+          <strong className="brand-title">{courseData.name}</strong>
         </button>
         <button className={mode === "home" ? "active nav-item" : "nav-item"} onClick={() => setMode("home")}>
-          {icon("dashboard")} Beranda
+          {icon("dashboard")} <span className="nav-text">Beranda</span>
         </button>
         <button className={mode === "rps" ? "active nav-item" : "nav-item"} onClick={() => setMode("rps")}>
-          {icon("assignment")} RPS
+          {icon("assignment")} <span className="nav-text">RPS</span>
         </button>
         <div className="nav-label">Pertemuan</div>
         {courseData.meetings.map((item) => (
@@ -173,20 +202,46 @@ function App() {
             onClick={() => openMeeting(item)}
           >
             <span className="nav-number">{String(item.number).padStart(2, "0")}</span>
-            <span>{item.title}</span>
+            <span className="nav-text">{item.title}</span>
           </button>
         ))}
       </aside>
       <main className="main">
         <header className="topbar">
+          <button
+            className="icon-button"
+            onClick={() => setSidebarOpen((value) => !value)}
+            aria-label="Toggle sidebar"
+            title={sidebarOpen ? "Collapse sidebar" : "Expand sidebar"}
+          >
+            {icon(sidebarOpen ? "menu_open" : "menu")}
+          </button>
           <div>
             <p>{courseData.academicYear} {courseData.semester || ""}</p>
             <h1>{courseData.name}</h1>
           </div>
-          <label className="search">
-            {icon("search")}
-            <input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Cari materi..." />
-          </label>
+          <div className="topbar-actions">
+            <label className="search">
+              {icon("search")}
+              <input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Cari materi..." />
+            </label>
+            <button
+              className="icon-button"
+              onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
+              aria-label="Toggle dark light mode"
+              title={theme === "dark" ? "Light mode" : "Dark mode"}
+            >
+              {icon(theme === "dark" ? "light_mode" : "dark_mode")}
+            </button>
+            <button
+              className="icon-button"
+              onClick={() => setBackgroundEnabled((value) => !value)}
+              aria-label="Toggle background"
+              title={backgroundEnabled ? "Matikan background" : "Nyalakan background"}
+            >
+              {icon(backgroundEnabled ? "wallpaper" : "texture")}
+            </button>
+          </div>
         </header>
         {mode === "home" && <Home meetings={filtered} onOpen={openMeeting} />}
         {mode === "rps" && <MarkdownPage title="Rencana Pembelajaran Semester" source={readMarkdown(courseData.rps?.path)} />}
@@ -197,6 +252,8 @@ function App() {
             setMode={setMode}
             slideIndex={slideIndex}
             setSlideIndex={setSlideIndex}
+            slideMode={slideMode}
+            setSlideMode={setSlideMode}
             slideTab={slideTab}
             setSlideTab={setSlideTab}
           />
@@ -210,9 +267,19 @@ function Home({ meetings, onOpen }: { meetings: Meeting[]; onOpen: (meeting: Mee
   return (
     <section className="home">
       <div className="hero">
-        <p>{courseData.code}</p>
-        <h2>{courseData.heroTitle || courseData.name}</h2>
-        <span>{courseData.description || "Materi pembelajaran, slide, narasi, dan praktikum."}</span>
+        <div className="hero-copy">
+          <p>{courseData.code}</p>
+          <h2>{courseData.heroTitle || courseData.name}</h2>
+          <span>{courseData.description || "Materi pembelajaran, slide, narasi, dan praktikum."}</span>
+        </div>
+        <div className="hero-visual" aria-hidden="true">
+          <div className="hero-orb">
+            {icon("auto_stories")}
+            <i />
+            <i />
+            <i />
+          </div>
+        </div>
       </div>
       <div className="grid">
         {meetings.map((meeting) => (
@@ -244,6 +311,8 @@ function MeetingPage({
   setMode,
   slideIndex,
   setSlideIndex,
+  slideMode,
+  setSlideMode,
   slideTab,
   setSlideTab
 }: {
@@ -252,6 +321,8 @@ function MeetingPage({
   setMode: (mode: Mode) => void;
   slideIndex: number;
   setSlideIndex: (index: number) => void;
+  slideMode: "single" | "all";
+  setSlideMode: (mode: "single" | "all") => void;
   slideTab: SlideTab;
   setSlideTab: (tab: SlideTab) => void;
 }) {
@@ -261,6 +332,7 @@ function MeetingPage({
   const current = sections[slideIndex] || "";
   const currentNumber = slideNumber(current, slideIndex);
   const renderedSlide = renderMarkdown(current);
+  const renderedAllSlides = renderMarkdown(slideSource);
   const renderedNarration = renderMarkdown(narrationForSlide(narrationSource, currentNumber));
   const currentImage = meeting.images.find((image) => image.slideNumber === currentNumber);
   const practicumSource = meeting.practicumPaths.map((path) => readMarkdown(path)).filter(Boolean).join("\n\n---\n\n");
@@ -277,8 +349,11 @@ function MeetingPage({
         <div>
           <p>Pertemuan {String(meeting.number).padStart(2, "0")}</p>
           <h2>{meeting.title}</h2>
+          {meeting.subtitle && <span>{meeting.subtitle}</span>}
         </div>
-        <div className="segmented">
+      </div>
+      <div className="meeting-mode-row">
+        <div className="segmented content-mode-toggle meeting-mode-toggle">
           <button className={mode === "meeting" ? "selected" : ""} onClick={() => setMode("meeting")}>{icon("auto_stories")} Slide</button>
           <button className={mode === "practicum" ? "selected" : ""} disabled={!meeting.practicumPaths.length} onClick={() => setMode("practicum")}>{icon("terminal")} Praktikum</button>
         </div>
@@ -288,6 +363,7 @@ function MeetingPage({
       ) : (
         <div className="reader-layout">
           <aside className="outline slide-list">
+            <div className="outline-title">{icon("view_list")} Daftar Slide</div>
             {sections.map((section, index) => (
               <button className={slideIndex === index ? "active" : ""} key={index} onClick={() => setSlideIndex(index)}>
                 <span>{String(slideNumber(section, index)).padStart(2, "0")}</span>
@@ -296,26 +372,122 @@ function MeetingPage({
             ))}
           </aside>
           <div className="reader">
-            <div className="tabs">
-              <button className={slideTab === "markdown" ? "active" : ""} onClick={() => setSlideTab("markdown")}>{icon("code")} Slide</button>
-              <button className={slideTab === "image" ? "active" : ""} onClick={() => setSlideTab("image")}>{icon("image")} Image</button>
-              <button className={slideTab === "narration" ? "active" : ""} onClick={() => setSlideTab("narration")}>{icon("record_voice_over")} Narasi</button>
+            <div className="reader-tab-header">
+              <div className="slide-tabs">
+                <button className={slideTab === "markdown" ? "active" : ""} onClick={() => setSlideTab("markdown")}>{icon("code")} Slide</button>
+                <button className={slideTab === "image" ? "active" : ""} onClick={() => setSlideTab("image")}>{icon("image")} Image</button>
+                <button className={slideTab === "narration" ? "active" : ""} onClick={() => setSlideTab("narration")}>{icon("record_voice_over")} Narasi</button>
+              </div>
             </div>
-            {slideTab === "markdown" && <article className="markdown" dangerouslySetInnerHTML={{ __html: renderedSlide.html || "<p>Slide belum tersedia.</p>" }} />}
+            {slideTab === "markdown" && (
+              <>
+                <div className="reader-toolbar">
+                  <div className="segmented">
+                    <button className={slideMode === "single" ? "selected" : ""} onClick={() => setSlideMode("single")}>
+                      Per slide
+                    </button>
+                    <button className={slideMode === "all" ? "selected" : ""} onClick={() => setSlideMode("all")}>
+                      Keseluruhan
+                    </button>
+                  </div>
+                  <span className="slide-counter">Slide {String(currentNumber).padStart(2, "0")} / {Math.max(0, sections.length - 1)}</span>
+                </div>
+                <article
+                  className="markdown"
+                  dangerouslySetInnerHTML={{
+                    __html: (slideMode === "single" ? renderedSlide.html : renderedAllSlides.html) || "<p>Slide belum tersedia.</p>"
+                  }}
+                />
+              </>
+            )}
             {slideTab === "narration" && <article className="markdown" dangerouslySetInnerHTML={{ __html: renderedNarration.html || "<p>Narasi slide belum tersedia.</p>" }} />}
-            {slideTab === "image" && (
-              <div className="image-viewer">
-                {currentImage ? <img src={imageUrl(currentImage.path)} alt={`Slide ${currentNumber}`} /> : <p>Image slide belum tersedia.</p>}
+            {slideTab === "image" && <ImageSlideView image={currentImage ? imageUrl(currentImage.path) : ""} index={slideIndex} total={sections.length} slideNumber={currentNumber} setIndex={setSlideIndex} />}
+            {slideTab !== "image" && (
+              <div className="reader-nav">
+                <button disabled={slideIndex === 0} onClick={() => setSlideIndex(slideIndex - 1)}>{icon("arrow_back")} Sebelumnya</button>
+                <span>Slide {String(currentNumber).padStart(2, "0")} / {Math.max(0, sections.length - 1)}</span>
+                <button disabled={slideIndex >= sections.length - 1} onClick={() => setSlideIndex(slideIndex + 1)}>Berikutnya {icon("arrow_forward")}</button>
               </div>
             )}
-            <div className="reader-nav">
-              <button disabled={slideIndex === 0} onClick={() => setSlideIndex(slideIndex - 1)}>{icon("arrow_back")} Sebelumnya</button>
-              <span>Slide {String(currentNumber).padStart(2, "0")} / {Math.max(0, sections.length - 1)}</span>
-              <button disabled={slideIndex >= sections.length - 1} onClick={() => setSlideIndex(slideIndex + 1)}>Berikutnya {icon("arrow_forward")}</button>
-            </div>
           </div>
         </div>
       )}
+    </section>
+  );
+}
+
+function ImageSlideView({
+  image,
+  index,
+  total,
+  slideNumber,
+  setIndex
+}: {
+  image: string;
+  index: number;
+  total: number;
+  slideNumber: number;
+  setIndex: (index: number) => void;
+}) {
+  const viewerRef = useRef<HTMLElement>(null);
+  const [fullscreen, setFullscreen] = useState(false);
+  const maxIndex = Math.max(0, total - 1);
+  const go = (delta: number) => setIndex(Math.max(0, Math.min(maxIndex, index + delta)));
+
+  const enterFullscreen = async () => {
+    if (viewerRef.current?.requestFullscreen) await viewerRef.current.requestFullscreen();
+    setFullscreen(true);
+  };
+
+  const exitFullscreen = async () => {
+    if (document.fullscreenElement && document.exitFullscreen) await document.exitFullscreen();
+    setFullscreen(false);
+  };
+
+  useEffect(() => {
+    const handleKey = (event: KeyboardEvent) => {
+      if (event.key === "ArrowLeft") {
+        event.preventDefault();
+        go(-1);
+      }
+      if (event.key === "ArrowRight") {
+        event.preventDefault();
+        go(1);
+      }
+    };
+    const handleFullscreen = () => setFullscreen(document.fullscreenElement === viewerRef.current);
+    window.addEventListener("keydown", handleKey);
+    document.addEventListener("fullscreenchange", handleFullscreen);
+    return () => {
+      window.removeEventListener("keydown", handleKey);
+      document.removeEventListener("fullscreenchange", handleFullscreen);
+    };
+  }, [index, maxIndex]);
+
+  return (
+    <section ref={viewerRef} className={`image-viewer ${fullscreen ? "fullscreen" : ""}`}>
+      <div className="image-toolbar">
+        <span>Slide {String(slideNumber).padStart(2, "0")} / {String(maxIndex).padStart(2, "0")}</span>
+        {fullscreen ? (
+          <button onClick={exitFullscreen}>{icon("fullscreen_exit")} Exit</button>
+        ) : (
+          <button onClick={enterFullscreen}>{icon("fullscreen")} Fullscreen</button>
+        )}
+      </div>
+      {image ? (
+        <div className="image-viewport">
+          <img src={image} alt={`Slide ${slideNumber}`} />
+          <button className="image-nav prev" onClick={() => go(-1)} disabled={index === 0} aria-label="Slide sebelumnya">
+            {icon("chevron_left")}
+          </button>
+          <button className="image-nav next" onClick={() => go(1)} disabled={index >= maxIndex} aria-label="Slide berikutnya">
+            {icon("chevron_right")}
+          </button>
+        </div>
+      ) : (
+        <p>Image slide belum tersedia.</p>
+      )}
+      <p className="image-help">Gunakan tombol navigasi atau tombol panah keyboard.</p>
     </section>
   );
 }

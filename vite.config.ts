@@ -16,6 +16,6 @@ const copyPracticalOutput = () => ({
 });
 
 export default defineConfig({
-  base: "./",
+  base: "/materi-td-data-mining/",
   plugins: [react(), copyPracticalOutput()]
 });
