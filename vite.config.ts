@@ -6,6 +6,11 @@ import react from "@vitejs/plugin-react";
 const copyPracticalOutput = () => ({
   name: "copy-practical-output",
   closeBundle() {
+    const favicon = path.resolve("favicon.ico");
+    if (fs.existsSync(favicon)) {
+      fs.copyFileSync(favicon, path.resolve("dist/favicon.ico"));
+    }
+
     const source = path.resolve("praktikum/output");
     if (!fs.existsSync(source)) return;
     fs.cpSync(source, path.resolve("dist/praktikum/output"), {
@@ -16,6 +21,6 @@ const copyPracticalOutput = () => ({
 });
 
 export default defineConfig({
-  base: "/materi-td-data-mining/",
+  base: "./",
   plugins: [react(), copyPracticalOutput()]
 });

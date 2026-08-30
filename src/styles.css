@@ -1031,20 +1031,87 @@ button:disabled {
 
 @media (max-width: 900px) {
   .app-shell {
-    --sidebar-width: 100%;
+    --sidebar-width: 290px;
+    --compact-topbar-height: 84px;
     display: block;
   }
 
   .app-shell.sidebar-collapsed {
-    --sidebar-width: 100%;
+    --sidebar-width: 290px;
+  }
+
+  .topbar {
+    min-height: var(--compact-topbar-height);
+    align-items: center;
+    flex-direction: row;
+    flex-wrap: nowrap;
+    gap: 12px;
+    padding: 14px 20px;
+    z-index: 40;
+  }
+
+  .topbar > div:first-of-type {
+    flex: 0 1 auto;
+  }
+
+  .topbar p {
+    display: none;
+  }
+
+  .topbar h1 {
+    max-width: 28vw;
+    overflow: hidden;
+    font-size: 0.95rem;
+    line-height: 1.15;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
 
   .topbar-actions {
-    width: 100%;
-    margin-left: 0;
+    flex: 1 1 220px;
+    min-width: 0;
+    width: auto;
+    margin-left: auto;
   }
 
-  .sidebar,
+  .sidebar {
+    position: fixed;
+    top: var(--compact-topbar-height);
+    left: 0;
+    bottom: 0;
+    z-index: 30;
+    width: min(var(--sidebar-width), calc(100vw - 56px));
+    height: calc(100vh - var(--compact-topbar-height));
+    max-height: none;
+    padding: 20px;
+    transform: translateX(0);
+    transition: transform 0.24s ease;
+  }
+
+  .sidebar.collapsed {
+    width: min(var(--sidebar-width), calc(100vw - 56px));
+    padding: 20px;
+    transform: translateX(-100%);
+  }
+
+  .sidebar.collapsed .brand {
+    grid-template-columns: 52px 1fr;
+  }
+
+  .sidebar.collapsed .brand-title,
+  .sidebar.collapsed .nav-label,
+  .sidebar.collapsed .nav-text {
+    display: inline;
+  }
+
+  .sidebar.collapsed .nav-item {
+    justify-content: flex-start;
+  }
+
+  .sidebar.collapsed .nav-number {
+    min-width: 32px;
+  }
+
   .outline {
     position: static;
     height: auto;
@@ -1078,7 +1145,6 @@ button:disabled {
     font-size: 2.55rem;
   }
 
-  .topbar,
   .page-title {
     align-items: stretch;
     flex-direction: column;
@@ -1091,7 +1157,14 @@ button:disabled {
   }
 
   .search {
+    flex: 1 1 150px;
     min-width: 0;
-    width: 100%;
+    width: auto;
+  }
+}
+
+@media (max-width: 560px) {
+  .topbar > div:first-of-type {
+    display: none;
   }
 }

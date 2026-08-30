@@ -7,7 +7,7 @@ export const courseData = {
   "description": "Mata kuliah Topik Dalam Data Mining membahas konsep, metode, perkembangan mutakhir, dan metodologi penelitian dalam bidang data mining dan knowledge discovery. Pembelajaran mengintegrasikan fondasi seperti data…",
   "heroTitle": "TD Data Mining",
   "sourceOfferingId": 10,
-  "generatedAt": "2026-08-30T01:04:50.457Z",
+  "generatedAt": "2026-08-30T05:34:18.237Z",
   "rps": {
     "title": "RPS TD Data Mining",
     "path": "rps/rps.md"
@@ -182,7 +182,9 @@ export const courseData = {
       "subtitle": "EDA dipahami bukan sekadar membuat grafik, tetapi sebagai proses untuk:",
       "slidePath": "slide/pert02.md",
       "narrationPath": "slide/narasi/pert02.md",
-      "practicumPaths": [],
+      "practicumPaths": [
+        "praktikum/pert02-praktikum.md"
+      ],
       "images": [
         {
           "slideNumber": 0,
